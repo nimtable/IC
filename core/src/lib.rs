@@ -20,6 +20,7 @@
 pub mod config;
 pub mod error;
 pub mod executor;
+pub mod optimizer;
 pub mod parser;
 
 pub use config::CompactionConfig;

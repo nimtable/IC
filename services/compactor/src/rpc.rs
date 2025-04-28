@@ -16,11 +16,12 @@
 
 use ic_codegen::compactor::compactor_service_server::CompactorService;
 use ic_codegen::compactor::{EchoRequest, EchoResponse};
+use ic_core::CompactionExecutor;
+use ic_core::executor::DataFusionExecutor;
+
 use ic_codegen::compactor::{
     RewriteFilesRequest as PbRewriteFilesRequest, RewriteFilesResponse as PbRewriteFilesResponse,
 };
-use ic_core::CompactionExecutor;
-use ic_core::executor::DataFusionExecutor;
 
 #[derive(Default)]
 pub struct CompactorServiceImpl;

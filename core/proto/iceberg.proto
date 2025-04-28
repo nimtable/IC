@@ -124,6 +124,7 @@ message FileScanTaskDescriptor {
     repeated int32 project_field_ids = 7;
     int64 sequence_number = 8;
     repeated int32 equality_ids = 9;
+    uint64 file_size_in_bytes = 10; 
 }
 
 message FileIoBuilder {
