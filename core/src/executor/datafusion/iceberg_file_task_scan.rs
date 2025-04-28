@@ -38,7 +38,7 @@ use iceberg::scan::FileScanTask;
 use iceberg_datafusion::physical_plan::expr_to_predicate::convert_filters_to_predicate;
 use iceberg_datafusion::to_datafusion_error;
 
-use super::SYS_HIDDEN_SEQ_NUM;
+use super::datafusion_processor::SYS_HIDDEN_SEQ_NUM;
 
 /// An execution plan for scanning iceberg file scan tasks
 #[derive(Debug)]
