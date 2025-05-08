@@ -16,11 +16,12 @@
 
 use ic_codegen::compactor::compactor_service_server::CompactorService;
 use ic_codegen::compactor::{EchoRequest, EchoResponse};
+use ic_core::CompactionExecutor;
+use ic_core::executor::DataFusionExecutor;
+
 use ic_codegen::compactor::{
     RewriteFilesRequest as PbRewriteFilesRequest, RewriteFilesResponse as PbRewriteFilesResponse,
 };
-use ic_core::CompactionExecutor;
-use ic_core::executor::DataFusionExecutor;
 
 #[derive(Default)]
 pub struct CompactorServiceImpl;
@@ -32,7 +33,8 @@ impl CompactorService for CompactorServiceImpl {
         request: tonic::Request<PbRewriteFilesRequest>,
     ) -> std::result::Result<tonic::Response<PbRewriteFilesResponse>, tonic::Status> {
         let request = request.into_inner();
-        let response = DataFusionExecutor::rewrite_file_proto(request)
+        let response = DataFusionExecutor::default()
+            .rewrite_file_proto(request)
             .await
             .map_err(|e| {
                 tracing::error!("Error processing request: {:?}", e);

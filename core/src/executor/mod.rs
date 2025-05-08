@@ -34,11 +34,14 @@ use ic_codegen::compactor::RewriteFilesResponse as PbRewriteFilesResponse;
 
 #[async_trait]
 pub trait CompactionExecutor: Send + Sync + 'static {
-    async fn rewrite_files(request: RewriteFilesRequest) -> Result<RewriteFilesResponse>;
+    async fn rewrite_files(&self, request: RewriteFilesRequest) -> Result<RewriteFilesResponse>;
 
-    async fn rewrite_file_proto(request: PbRewriteFilesRequest) -> Result<PbRewriteFilesResponse> {
+    async fn rewrite_file_proto(
+        &self,
+        request: PbRewriteFilesRequest,
+    ) -> Result<PbRewriteFilesResponse> {
         let request = PbRewriteFilesRequestDecoder::new(request).decode()?;
-        let response = Self::rewrite_files(request).await?;
+        let response = self.rewrite_files(request).await?;
         let response = RewriteFilesResponseProtoEncoder::new(response).encode();
         Ok(response)
     }

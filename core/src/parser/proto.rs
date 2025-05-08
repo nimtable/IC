@@ -127,6 +127,7 @@ impl PbRewriteFilesRequestDecoder {
                 deletes: vec![],
                 sequence_number: file_scan_task_descriptor.sequence_number,
                 equality_ids: file_scan_task_descriptor.equality_ids,
+                file_size_in_bytes: 0,
             };
             match file_scan_task.data_file_content {
                 iceberg::spec::DataContentType::Data => {

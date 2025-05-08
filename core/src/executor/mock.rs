@@ -23,7 +23,7 @@ pub struct MockExecutor;
 
 #[async_trait]
 impl CompactionExecutor for MockExecutor {
-    async fn rewrite_files(_request: RewriteFilesRequest) -> Result<RewriteFilesResponse> {
+    async fn rewrite_files(&self, _request: RewriteFilesRequest) -> Result<RewriteFilesResponse> {
         Ok(RewriteFilesResponse::default())
     }
 }
