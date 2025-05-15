@@ -2,9 +2,9 @@ use ic_codegen::compactor::RewriteFilesStat;
 use iceberg::spec::DataFile;
 use iceberg::{Catalog, TableIdent};
 
-use crate::Result;
 use crate::executor::{InputFileScanTasks, RewriteFilesRequest, RewriteFilesResponse};
 use crate::{CompactionConfig, CompactionExecutor};
+use crate::{CompactionError, Result};
 use futures_async_stream::for_await;
 use iceberg::scan::FileScanTask;
 use iceberg::table::Table;
@@ -17,6 +17,7 @@ use crate::executor::DataFusionExecutor;
 
 pub enum CompactionType {
     Full(TableIdent),
+    Partial((TableIdent, InputFileScanTasks)),
 }
 pub struct Compaction {
     pub config: Arc<CompactionConfig>,
@@ -36,14 +37,26 @@ impl Compaction {
 
     pub async fn compact(&self, compaction_type: CompactionType) -> Result<RewriteFilesStat> {
         match compaction_type {
-            CompactionType::Full(table_id) => self.full_compact(table_id).await,
+            CompactionType::Full(table_ident) => {
+                let table = self.catalog.load_table(&table_ident).await?;
+                let input_file_scan_tasks = get_tasks_from_table(table.clone()).await?;
+                self.compact_inner(table, input_file_scan_tasks).await
+            }
+            CompactionType::Partial((table_ident, input_file_scan_tasks)) => {
+                let table = self.catalog.load_table(&table_ident).await?;
+                let stat = self.compact_inner(table, input_file_scan_tasks).await;
+                self.purge_delete_files(table_ident).await?;
+                stat
+            }
         }
     }
 
-    pub async fn full_compact(&self, table_id: TableIdent) -> Result<RewriteFilesStat> {
-        let table = self.catalog.load_table(&table_id).await?;
+    pub async fn compact_inner(
+        &self,
+        table: Table,
+        input_file_scan_tasks: InputFileScanTasks,
+    ) -> Result<RewriteFilesStat> {
         let (data_files, delete_files) = get_old_files_from_table(table.clone()).await?;
-        let input_file_scan_tasks = get_tasks_from_table(table.clone()).await?;
 
         let file_io = table.file_io().clone();
         let schema = table.metadata().current_schema();
@@ -66,8 +79,8 @@ impl Compaction {
         let txn = Transaction::new(&table);
         let mut rewrite_action = txn.rewrite_files(None, vec![])?;
         rewrite_action.add_data_files(output_data_files.clone())?;
-        rewrite_action.delete_files(data_files)?;
-        rewrite_action.delete_files(delete_files)?;
+        rewrite_action.delete_files(data_files.into_iter().map(|(d, _)| d))?;
+        rewrite_action.delete_files(delete_files.into_iter().map(|(d, _)| d))?;
         let tx = rewrite_action.apply().await?;
         tx.commit(self.catalog.as_ref()).await?;
         Ok(RewriteFilesStat {
@@ -77,9 +90,37 @@ impl Compaction {
             failed_data_files_count: stat.failed_data_files_count,
         })
     }
+
+    pub async fn purge_delete_files(&self, table_ident: TableIdent) -> Result<()> {
+        let table = self.catalog.load_table(&table_ident).await?;
+        let (data_files, delete_files) = get_old_files_from_table(table.clone()).await?;
+        let min_data_file_seq_num = data_files
+            .iter()
+            .map(|(_, seq_num)| seq_num)
+            .min()
+            .unwrap_or(&Some(0))
+            .ok_or_else(|| {
+                CompactionError::Config("No seq_nums found in data files".to_string())
+            })?;
+        let purge_files = delete_files.into_iter().filter_map(|(d, seq_num)| {
+            if seq_num.unwrap_or(i64::MAX) < min_data_file_seq_num {
+                Some(d)
+            } else {
+                None
+            }
+        });
+        let txn = Transaction::new(&table);
+        let mut rewrite_action = txn.rewrite_files(None, vec![])?;
+        rewrite_action.delete_files(purge_files)?;
+        let tx = rewrite_action.apply().await?;
+        tx.commit(self.catalog.as_ref()).await?;
+        Ok(())
+    }
 }
 
-async fn get_old_files_from_table(table: Table) -> Result<(Vec<DataFile>, Vec<DataFile>)> {
+async fn get_old_files_from_table(
+    table: Table,
+) -> Result<(Vec<(DataFile, Option<i64>)>, Vec<(DataFile, Option<i64>)>)> {
     let manifest_list = table
         .metadata()
         .current_snapshot()
@@ -96,13 +137,13 @@ async fn get_old_files_from_table(table: Table) -> Result<(Vec<DataFile>, Vec<Da
         for i in entry {
             match i.content_type() {
                 iceberg::spec::DataContentType::Data => {
-                    data_file.push(i.data_file().clone());
+                    data_file.push((i.data_file().clone(), i.sequence_number));
                 }
                 iceberg::spec::DataContentType::EqualityDeletes => {
-                    delete_file.push(i.data_file().clone());
+                    delete_file.push((i.data_file().clone(), i.sequence_number));
                 }
                 iceberg::spec::DataContentType::PositionDeletes => {
-                    delete_file.push(i.data_file().clone());
+                    delete_file.push((i.data_file().clone(), i.sequence_number));
                 }
             }
         }
