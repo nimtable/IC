@@ -1,27 +1,27 @@
 use std::sync::Arc;
 
 use crate::error::Result;
-use ic_codegen::compactor::DataFile;
-use ic_codegen::compactor::FileIoBuilder;
-use ic_codegen::compactor::FileScanTaskDescriptor;
-use ic_codegen::compactor::Literal;
-use ic_codegen::compactor::MapLiteral;
-use ic_codegen::compactor::NestedFieldDescriptor;
-use ic_codegen::compactor::OptionalLiteral;
-use ic_codegen::compactor::PartitionSpec;
-use ic_codegen::compactor::PrimitiveLiteral;
-use ic_codegen::compactor::RewriteFilesRequest as PbRewriteFilesRequest;
-use ic_codegen::compactor::RewriteFilesResponse as PbRewriteFilesResponse;
-use ic_codegen::compactor::RewriteFilesStat as PbRewriteFilesStat;
-use ic_codegen::compactor::SchemaDescriptor;
-use ic_codegen::compactor::StructLiteralDescriptor;
-use ic_codegen::compactor::Transform;
-use ic_codegen::compactor::literal;
-use ic_codegen::compactor::nested_field_descriptor::FieldType;
-use ic_codegen::compactor::primitive_literal::KindLiteral;
-use ic_codegen::compactor::primitive_literal::KindWithoutInnerLiteral;
-use ic_codegen::compactor::primitive_type::Kind;
-use ic_codegen::compactor::primitive_type::KindWithoutInner;
+use bergloom_codegen::compactor::DataFile;
+use bergloom_codegen::compactor::FileIoBuilder;
+use bergloom_codegen::compactor::FileScanTaskDescriptor;
+use bergloom_codegen::compactor::Literal;
+use bergloom_codegen::compactor::MapLiteral;
+use bergloom_codegen::compactor::NestedFieldDescriptor;
+use bergloom_codegen::compactor::OptionalLiteral;
+use bergloom_codegen::compactor::PartitionSpec;
+use bergloom_codegen::compactor::PrimitiveLiteral;
+use bergloom_codegen::compactor::RewriteFilesRequest as PbRewriteFilesRequest;
+use bergloom_codegen::compactor::RewriteFilesResponse as PbRewriteFilesResponse;
+use bergloom_codegen::compactor::RewriteFilesStat as PbRewriteFilesStat;
+use bergloom_codegen::compactor::SchemaDescriptor;
+use bergloom_codegen::compactor::StructLiteralDescriptor;
+use bergloom_codegen::compactor::Transform;
+use bergloom_codegen::compactor::literal;
+use bergloom_codegen::compactor::nested_field_descriptor::FieldType;
+use bergloom_codegen::compactor::primitive_literal::KindLiteral;
+use bergloom_codegen::compactor::primitive_literal::KindWithoutInnerLiteral;
+use bergloom_codegen::compactor::primitive_type::Kind;
+use bergloom_codegen::compactor::primitive_type::KindWithoutInner;
 use iceberg::spec::DataContentType;
 use iceberg::spec::NestedField;
 use iceberg::spec::Type;
@@ -333,41 +333,41 @@ impl PbRewriteFilesRequestDecoder {
     /// It handles different transform types and their parameters.
     fn decode_transform(transform: &Transform) -> Result<iceberg::spec::Transform> {
         match transform.params {
-            Some(ic_codegen::compactor::transform::Params::TransformWithoutInner(
+            Some(bergloom_codegen::compactor::transform::Params::TransformWithoutInner(
                 transform_type,
             )) => {
-                match ic_codegen::compactor::transform::TransformWithoutInner::try_from(
+                match bergloom_codegen::compactor::transform::TransformWithoutInner::try_from(
                     transform_type,
                 )
                 .map_err(|e| CompactionError::Config(format!("failed to parse kind: {}", e)))?
                 {
-                    ic_codegen::compactor::transform::TransformWithoutInner::Identity => {
+                    bergloom_codegen::compactor::transform::TransformWithoutInner::Identity => {
                         Ok(iceberg::spec::Transform::Identity)
                     }
-                    ic_codegen::compactor::transform::TransformWithoutInner::Year => {
+                    bergloom_codegen::compactor::transform::TransformWithoutInner::Year => {
                         Ok(iceberg::spec::Transform::Year)
                     }
-                    ic_codegen::compactor::transform::TransformWithoutInner::Month => {
+                    bergloom_codegen::compactor::transform::TransformWithoutInner::Month => {
                         Ok(iceberg::spec::Transform::Month)
                     }
-                    ic_codegen::compactor::transform::TransformWithoutInner::Day => {
+                    bergloom_codegen::compactor::transform::TransformWithoutInner::Day => {
                         Ok(iceberg::spec::Transform::Day)
                     }
-                    ic_codegen::compactor::transform::TransformWithoutInner::Hour => {
+                    bergloom_codegen::compactor::transform::TransformWithoutInner::Hour => {
                         Ok(iceberg::spec::Transform::Hour)
                     }
-                    ic_codegen::compactor::transform::TransformWithoutInner::Void => {
+                    bergloom_codegen::compactor::transform::TransformWithoutInner::Void => {
                         Ok(iceberg::spec::Transform::Void)
                     }
-                    ic_codegen::compactor::transform::TransformWithoutInner::Unknown => {
+                    bergloom_codegen::compactor::transform::TransformWithoutInner::Unknown => {
                         Ok(iceberg::spec::Transform::Unknown)
                     }
                 }
             }
-            Some(ic_codegen::compactor::transform::Params::Bucket(bucket_num)) => {
+            Some(bergloom_codegen::compactor::transform::Params::Bucket(bucket_num)) => {
                 Ok(iceberg::spec::Transform::Bucket(bucket_num))
             }
-            Some(ic_codegen::compactor::transform::Params::Truncate(truncate_width)) => {
+            Some(bergloom_codegen::compactor::transform::Params::Truncate(truncate_width)) => {
                 Ok(iceberg::spec::Transform::Truncate(truncate_width))
             }
             None => Err(CompactionError::Config(
@@ -549,7 +549,7 @@ impl RewriteFilesResponseProtoEncoder {
 #[cfg(test)]
 mod test {
     use super::*;
-    use ic_codegen::compactor::{MapType, NestedFieldDescriptor, PrimitiveType, StructType};
+    use bergloom_codegen::compactor::{MapType, NestedFieldDescriptor, PrimitiveType, StructType};
 
     /// Test building a struct field from protobuf
     #[test]

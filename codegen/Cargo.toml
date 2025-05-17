@@ -1,11 +1,11 @@
 [package]
-name = "ic-codegen"
+name = "bergloom-codegen"
 version = "0.1.0"
 edition = "2024"
 description = "Protocol Buffers code generation for IC project"
 
 [lib]
-name = "ic_codegen"
+name = "bergloom_codegen"
 path = "src/lib.rs"
 
 [dependencies]
@@ -15,3 +15,4 @@ tonic = { workspace = true }
 [build-dependencies]
 prost-build = "0.12"
 tonic-build = "0.11" 
+

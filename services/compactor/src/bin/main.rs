@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 IC
+ * Copyright 2025 BergLoom
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-use ic_service_compactor::{config::Config, server::grpc_compactor_serve};
+use bergloom_service_compactor::{config::Config, server::grpc_compactor_serve};
 use tracing_subscriber::fmt;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;

@@ -33,6 +33,6 @@ thiserror = "2.0.11"
 url = "2"
 
 # Local workspace members
-ic-core = { path = "./core" }
-ic-codegen = { path = "./codegen" }
-ic-service-compactor = { path = "./services/compactor" }
+bergloom-core = { path = "./core" }
+bergloom-codegen = { path = "./codegen" }
+bergloom-service-compactor = { path = "./services/compactor" }

@@ -1,4 +1,4 @@
-use ic_codegen::compactor::RewriteFilesStat;
+use bergloom_codegen::compactor::RewriteFilesStat;
 use iceberg::spec::DataFile;
 use iceberg::{Catalog, TableIdent};
 

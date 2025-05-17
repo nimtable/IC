@@ -1,15 +1,15 @@
 [package]
-name = "ic-core"
+name = "bergloom-core"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
 async-stream = { workspace = true }
 async-trait = { workspace = true }
+bergloom-codegen = {workspace = true}
 datafusion = "45.0.0"
 futures = { workspace = true }
 futures-async-stream = { workspace = true }
-ic-codegen = {workspace = true}
 iceberg = { workspace = true }
 iceberg-catalog-sql = { git = "https://github.com/risingwavelabs/iceberg-rust.git", rev = "fd79d47" }
 iceberg-datafusion = { git = "https://github.com/risingwavelabs/iceberg-rust.git", rev = "fd79d47" }

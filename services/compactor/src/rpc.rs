@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 IC
+ * Copyright 2025 BergLoom
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-use ic_codegen::compactor::compactor_service_server::CompactorService;
-use ic_codegen::compactor::{EchoRequest, EchoResponse};
-use ic_core::CompactionExecutor;
-use ic_core::executor::DataFusionExecutor;
+use bergloom_codegen::compactor::compactor_service_server::CompactorService;
+use bergloom_codegen::compactor::{EchoRequest, EchoResponse};
+use bergloom_core::CompactionExecutor;
+use bergloom_core::executor::DataFusionExecutor;
 
-use ic_codegen::compactor::{
+use bergloom_codegen::compactor::{
     RewriteFilesRequest as PbRewriteFilesRequest, RewriteFilesResponse as PbRewriteFilesResponse,
 };
 

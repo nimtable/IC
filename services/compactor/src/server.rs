@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 IC
+ * Copyright 2025 BergLoom
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  */
 
 use crate::rpc::CompactorServiceImpl;
-use ic_codegen::compactor::compactor_service_server::CompactorServiceServer;
+use bergloom_codegen::compactor::compactor_service_server::CompactorServiceServer;
 use std::net::SocketAddr;
 use tokio::task::JoinHandle;
 use tonic::transport::Server;

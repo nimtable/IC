@@ -1,5 +1,5 @@
 [package]
-name = "ic-service-compactor"
+name = "bergloom-service-compactor"
 version = "0.1.0"
 edition = "2024"
 
@@ -9,8 +9,8 @@ path = "src/bin/main.rs"
 
 [dependencies]
 async-trait = "0.1.86"
-ic-codegen = { workspace = true }
-ic-core = { workspace = true }
+bergloom-codegen = { workspace = true }
+bergloom-core = { workspace = true }
 iceberg = { workspace = true }
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.9"

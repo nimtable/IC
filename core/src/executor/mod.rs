@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 IC
+ * Copyright 2025 BergLoom
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,9 +28,9 @@ pub mod mock;
 pub use mock::MockExecutor;
 pub mod datafusion;
 use crate::error::Result;
+use bergloom_codegen::compactor::RewriteFilesRequest as PbRewriteFilesRequest;
+use bergloom_codegen::compactor::RewriteFilesResponse as PbRewriteFilesResponse;
 pub use datafusion::DataFusionExecutor;
-use ic_codegen::compactor::RewriteFilesRequest as PbRewriteFilesRequest;
-use ic_codegen::compactor::RewriteFilesResponse as PbRewriteFilesResponse;
 
 #[async_trait]
 pub trait CompactionExecutor: Send + Sync + 'static {
