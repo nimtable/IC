@@ -1,4 +1,3 @@
-use crate::error::Result;
 /*
  * Copyright 2025 BergLoom
  *
@@ -15,6 +14,7 @@ use crate::error::Result;
  * limitations under the License.
  */
 
+use crate::error::Result;
 use ::datafusion::{
     parquet::file::properties::WriterProperties,
     prelude::{SessionConfig, SessionContext},

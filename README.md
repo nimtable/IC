@@ -21,6 +21,20 @@ BergLoom is a high-performance Iceberg table compaction runtime built on Rust, o
 ## 📝 Code Example
 
 ```rust
+// 1. Build iceberg catalog with iceberg rust https://github.com/apache/iceberg-rust
+  let catalog = Catalog::default();
+// 2. Build compaction with config
+  let compaction_config = Arc::new(CompactionConfig {
+      batch_parallelism: Some(parallelism),
+      target_partitions: Some(parallelism),
+      data_file_prefix: None,
+  });
+  let compaction = Compaction::new(compaction_config, self.catalog);
+//3. run compact
+  compaction
+    .compact(CompactionType::Full(self.table_ident))
+    .await
+    .unwrap();
 ```
 
 ## 🗺️ Roadmap
