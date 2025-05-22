@@ -94,6 +94,7 @@ impl CompactionExecutor for DataFusionExecutor {
             batch_parallelism,
             target_partitions,
             file_io.clone(),
+            partition_spec.clone(),
         )
         .execute()
         .await?;
