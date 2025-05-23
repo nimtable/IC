@@ -7,6 +7,7 @@ edition = "2024"
 async-stream = { workspace = true }
 async-trait = { workspace = true }
 bergloom-codegen = {workspace = true}
+backon = "1.5.0"
 datafusion = "45.0.0"
 futures = { workspace = true }
 futures-async-stream = { workspace = true }

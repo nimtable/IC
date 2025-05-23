@@ -85,3 +85,14 @@ pub struct RewriteFilesStat {
     pub rewritten_bytes: u64,
     pub failed_data_files_count: u32,
 }
+pub enum ExecutorType {
+    DataFusion,
+    Mock,
+}
+
+pub fn create_compaction_executor(executor_type: ExecutorType) -> Box<dyn CompactionExecutor> {
+    match executor_type {
+        ExecutorType::DataFusion => Box::new(DataFusionExecutor::default()),
+        ExecutorType::Mock => Box::new(MockExecutor),
+    }
+}

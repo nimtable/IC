@@ -1,10 +1,29 @@
+/*
+ * Copyright 2025 BergLoom
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 use bergloom_codegen::compactor::RewriteFilesStat;
 use iceberg::spec::DataFile;
 use iceberg::{Catalog, TableIdent};
 
-use crate::Result;
-use crate::executor::{InputFileScanTasks, RewriteFilesRequest, RewriteFilesResponse};
+use crate::executor::{
+    ExecutorType, InputFileScanTasks, RewriteFilesRequest, RewriteFilesResponse,
+    create_compaction_executor,
+};
 use crate::{CompactionConfig, CompactionExecutor};
+use crate::{CompactionError, Result};
 use futures_async_stream::for_await;
 use iceberg::scan::FileScanTask;
 use iceberg::table::Table;
@@ -12,6 +31,10 @@ use iceberg::transaction::Transaction;
 use iceberg::writer::file_writer::location_generator::DefaultLocationGenerator;
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::time::Duration; // Keep for CommitManagerConfig if needed elsewhere, or for direct use in backon
+
+use backon::ExponentialBuilder;
+use backon::Retryable;
 
 use crate::executor::DataFusionExecutor;
 
@@ -25,8 +48,12 @@ pub struct Compaction {
 }
 
 impl Compaction {
-    pub fn new(config: Arc<CompactionConfig>, catalog: Arc<dyn Catalog>) -> Self {
-        let executor: Box<dyn CompactionExecutor> = Box::new(DataFusionExecutor::default());
+    pub fn new(
+        config: Arc<CompactionConfig>,
+        catalog: Arc<dyn Catalog>,
+        executor_type: ExecutorType,
+    ) -> Self {
+        let executor = create_compaction_executor(executor_type);
         Self {
             config,
             executor,
@@ -63,13 +90,20 @@ impl Compaction {
         } = DataFusionExecutor::default()
             .rewrite_files(rewrite_files_request)
             .await?;
-        let txn = Transaction::new(&table);
-        let mut rewrite_action = txn.rewrite_files(None, vec![])?;
-        rewrite_action.add_data_files(output_data_files.clone())?;
-        rewrite_action.delete_files(data_files)?;
-        rewrite_action.delete_files(delete_files)?;
-        let txn = rewrite_action.apply().await?;
-        txn.commit(self.catalog.as_ref()).await?;
+
+        let commit_manager = CommitManager::new(
+            CommitManagerConfig::default(),
+            self.catalog.clone(),
+            table_ident.clone(),
+        );
+
+        commit_manager
+            .rewrite_files(
+                output_data_files,
+                data_files.into_iter().chain(delete_files.into_iter()),
+            )
+            .await?;
+
         Ok(RewriteFilesStat {
             rewritten_files_count: stat.rewritten_files_count,
             added_files_count: stat.added_files_count,
@@ -170,6 +204,83 @@ async fn get_tasks_from_table(table: Table) -> Result<InputFileScanTasks> {
     })
 }
 
+#[derive(Debug, Clone)]
+pub struct CommitManagerConfig {
+    pub max_retries: u32, // This can be used to configure the backon strategy
+    pub retry_initial_delay: Duration, // For exponential backoff
+    pub retry_max_delay: Duration, // For exponential backoff
+}
+
+impl Default for CommitManagerConfig {
+    fn default() -> Self {
+        Self {
+            max_retries: 3,
+            retry_initial_delay: Duration::from_secs(1),
+            retry_max_delay: Duration::from_secs(10),
+        }
+    }
+}
+
+// Manages the commit process with retries
+pub struct CommitManager {
+    config: CommitManagerConfig,
+    catalog: Arc<dyn Catalog>,
+    table_ident: TableIdent,
+}
+
+impl CommitManager {
+    pub fn new(
+        config: CommitManagerConfig,
+        catalog: Arc<dyn Catalog>,
+        table_ident: TableIdent,
+    ) -> Self {
+        Self {
+            config,
+            catalog,
+            table_ident,
+        }
+    }
+}
+
+impl CommitManager {
+    pub async fn rewrite_files(
+        &self,
+        data_files: impl IntoIterator<Item = DataFile>,
+        delete_files: impl IntoIterator<Item = DataFile>,
+    ) -> Result<()> {
+        let data_files: Vec<DataFile> = data_files.into_iter().collect();
+        let delete_files: Vec<DataFile> = delete_files.into_iter().collect();
+        let operation = || {
+            let catalog = self.catalog.clone();
+            let table_ident = self.table_ident.clone();
+            let data_files = data_files.clone();
+            let delete_files = delete_files.clone();
+            async move {
+                // reload the table to get the latest state
+                let table = catalog.load_table(&table_ident).await?;
+                let txn = Transaction::new(&table);
+                let mut rewrite_action = txn.rewrite_files(None, vec![])?;
+                rewrite_action.add_data_files(data_files)?;
+                rewrite_action.delete_files(delete_files)?;
+                let txn = rewrite_action.apply().await?;
+                txn.commit(catalog.as_ref()).await?;
+                Ok(())
+            }
+        };
+
+        let retry_strategy = ExponentialBuilder::default()
+            .with_min_delay(self.config.retry_initial_delay)
+            .with_max_delay(self.config.retry_max_delay)
+            .with_max_times(self.config.max_retries as usize);
+
+        operation
+            .retry(&retry_strategy)
+            .when(|e: &iceberg::Error| matches!(e.kind(), iceberg::ErrorKind::DataInvalid))
+            .await
+            .map_err(|e: iceberg::Error| CompactionError::from(e)) // Convert backon::Error to your CompactionError
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use iceberg::Catalog;
@@ -179,6 +290,7 @@ mod tests {
 
     use crate::CompactionConfig;
     use crate::compaction::Compaction;
+    use crate::executor::ExecutorType;
 
     async fn build_catalog() -> SqlCatalog {
         let sql_lite_uri = "postgresql://xxhx:123456@localhost:5432/demo_iceberg";
@@ -210,7 +322,7 @@ mod tests {
             target_partitions: Some(4),
             data_file_prefix: None,
         });
-        let compaction = Compaction::new(compaction_config, catalog);
+        let compaction = Compaction::new(compaction_config, catalog, ExecutorType::DataFusion);
         compaction
             .compact(crate::compaction::CompactionType::Full(table_id))
             .await

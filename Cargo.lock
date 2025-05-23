@@ -544,6 +544,7 @@ version = "0.1.0"
 dependencies = [
  "async-stream",
  "async-trait",
+ "backon",
  "bergloom-codegen",
  "datafusion",
  "futures",
